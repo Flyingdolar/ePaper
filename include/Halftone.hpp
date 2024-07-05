@@ -29,6 +29,15 @@ cv::Mat1f DBS(const cv::Mat1f img, int kernelSize, float sigma, int iters, bool 
  */
 cv::Mat1f RTBDBS(const cv::Mat1f img, int kernelSize, float sigma, int iters, bool verbose = false);
 
+/**
+ * @brief Halftone by Dithering
+ * @param grayImg Input image (Single Channel, 0-1, float)
+ * @param kernelSize Kernel size for Dithering
+ * @param verbose Verbose mode (default: false)
+ * @return Halftoned image (Single Channel, 0-1, float)
+ */
+cv::Mat1f Dither(const cv::Mat1f grayImg, int kernelSize, bool verbose = false);
+
 }  // namespace halftone
 
 #endif  // HALFTONE_HPP

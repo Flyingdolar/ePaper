@@ -230,4 +230,29 @@ cv::Mat1f RTBDBS(const cv::Mat1f grayImg, int kernelSize, float sigma, int iters
     return resImg;
 }
 
+cv::Mat1f Dither(const cv::Mat1f grayImg, int kernelSize, bool verbose) {
+    int height = grayImg.rows, width = grayImg.cols;
+    cv::Mat1f resImg = grayImg.clone();
+
+    // 1. Create Dither Matrix
+    std::vector<int> randList;
+    for (int idx = 0; idx < kernelSize * kernelSize; idx++) randList.push_back(idx);
+    std::random_shuffle(randList.begin(), randList.end());
+    cv::Mat1i ditherMat = cv::Mat1f::zeros(kernelSize, kernelSize);
+    for (int row = 0; row < kernelSize; row++)
+        for (int col = 0; col < kernelSize; col++) ditherMat.at<int>(row, col) = randList[row * kernelSize + col];
+    if (verbose) saveData::imgMat(ditherMat, "DitherMatrix", kernelSize * kernelSize);
+
+    // 2. Dithering Process
+    for (int row = 0; row < height; row++)
+        for (int col = 0; col < width; col++) {
+            int kRow = row % kernelSize, kCol = col % kernelSize;
+            if (grayImg(row, col) > (float)ditherMat(kRow, kCol) / (float)(kernelSize * kernelSize))
+                resImg(row, col) = 1;
+            else
+                resImg(row, col) = 0;
+        }
+    return resImg;
+}
+
 }  // namespace halftone
