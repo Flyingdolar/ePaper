@@ -181,6 +181,7 @@ cv::Mat1f Dither(const cv::Mat1f grayImg, int kernelSize, bool verbose) {
 
 // Error Diffusion Halftoning
 cv::Mat1f ErrDiff(const cv::Mat1f grayImg, int kernelSize, bool verbose) {
+    return grayImg;
 }
 
 }  // namespace halftone

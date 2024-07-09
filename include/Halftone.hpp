@@ -48,7 +48,16 @@ cv::Mat1f RTBDBS(const cv::Mat1f img, int kernelSize, float sigma, int iters, bo
  * @param verbose Verbose mode (default: false)
  * @return Halftoned image (Single Channel, 0-1, float)
  */
-cv::Mat1f Dither(const cv::Mat1f grayImg, int kernelSize, bool verbose = false);
+cv::Mat1f Dither(const cv::Mat1f grayImg, int kernelSize = 2, bool verbose = false);
+
+/**
+ * @brief Halftone by Error Diffusion
+ * @param grayImg Input image (Single Channel, 0-1, float)
+ * @param kernelSize Kernel size for Error Diffusion (3: Floyd-Steinberg, 5: JJN)
+ * @param verbose Verbose mode (default: false)
+ * @return Halftoned image (Single Channel, 0-1, float)
+ */
+cv::Mat1f ErrDiff(const cv::Mat1f grayImg, int kernelSize = 3, bool verbose = false);
 
 namespace detail {
 
