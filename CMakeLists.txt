@@ -5,6 +5,12 @@ project(IPP-Design LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Set build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+endif()
+
 # Find required packages
 find_package(OpenCV REQUIRED QUIET)
 find_package(NumCpp REQUIRED QUIET)
