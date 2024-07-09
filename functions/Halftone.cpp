@@ -181,7 +181,34 @@ cv::Mat1f Dither(const cv::Mat1f grayImg, int kernelSize, bool verbose) {
 
 // Error Diffusion Halftoning
 cv::Mat1f ErrDiff(const cv::Mat1f grayImg, int kernelSize, bool verbose) {
-    return grayImg;
+    int height = grayImg.rows, width = grayImg.cols;
+    cv::Mat1f resImg = grayImg.clone(), errImg = cv::Mat1f::zeros(height, width);
+
+    // 1. Create Error Diffusion Kernel
+    cv::Mat1b errKernel;
+    if (kernelSize == 3) errKernel = kFloydSteinberg;  // Floyd-Steinberg Kernel
+    if (kernelSize == 5) errKernel = kJJN;             // JJN Kernel
+    if (errKernel.empty()) {
+        std::cerr << "Error Diffusion Kernel Size is not Supported!" << std::endl;
+        return resImg;
+    }
+
+    // 2. Error Diffusion Process
+    int kSum = cv::sum(errKernel)[0];
+    for (int row = 0; row < height; row++)
+        for (int col = 0; col < width; col++) {
+            float grayVal = grayImg(row, col) + errImg(row, col);
+            float diffVal = grayVal - ((grayVal > 0.5) ? 1 : 0);
+
+            resImg(row, col) = (grayVal > 0.5) ? 1 : 0;  // Update the Result Image
+            for (int rdx = 0; rdx < errKernel.rows; rdx++)
+                for (int cdx = 0; cdx < errKernel.cols; cdx++) {  // Diffuse the Error
+                    int nRow = row + rdx, nCol = (col + cdx) - (errKernel.cols / 2);
+                    if (nRow < 0 || nRow >= height || nCol < 0 || nCol >= width) continue;
+                    errImg(nRow, nCol) += (errKernel(rdx, cdx) / (float)kSum) * diffVal;
+                }
+        }
+    return resImg;
 }
 
 }  // namespace halftone
