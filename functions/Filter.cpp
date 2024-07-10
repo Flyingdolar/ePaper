@@ -2,6 +2,36 @@
 
 namespace filter {
 
+// Convolution on Parallel Kernel
+cv::Mat plConv(cv::Mat img, cv::Mat kernel) {
+    cv::Mat resImg = cv::Mat::zeros(img.rows, img.cols, CV_32F);
+    for (int row = 0; row < img.rows; row++)
+        for (int col = 0; col < img.cols; col++)
+            for (int rdx = 0; rdx <= kernel.rows / 2; rdx++)
+                for (int cdx = 0; cdx <= kernel.cols / 2; cdx++) {
+                    int nRow = row + rdx, nCol = col + cdx;
+                    int kRow = rdx + kernel.rows / 2, kCol = cdx + kernel.cols / 2;
+                    if (nRow < 0 || nRow >= img.rows || nCol < 0 || nCol >= img.cols) continue;
+                    resImg.at<float>(nRow, nCol) += img.at<float>(row, col) * kernel.at<float>(kRow, kCol);
+                    resImg.at<float>(row, col) += img.at<float>(nRow, nCol) * kernel.at<float>(kRow, kCol);
+                }
+    return resImg;
+}
+
+// Convolution on Normal Kernel
+cv::Mat conv(cv::Mat img, cv::Mat kernel) {
+    cv::Mat resImg = cv::Mat::zeros(img.rows, img.cols, CV_32F);
+    for (int row = 0; row < img.rows; row++)
+        for (int col = 0; col < img.cols; col++)
+            for (int rdx = -kernel.rows / 2; rdx <= kernel.rows / 2; rdx++)
+                for (int cdx = -kernel.cols / 2; cdx <= kernel.cols / 2; cdx++) {
+                    int nRow = row + rdx, nCol = col + cdx;
+                    int kRow = rdx + kernel.rows / 2, kCol = cdx + kernel.cols / 2;
+                    if (nRow < 0 || nRow >= img.rows || nCol < 0 || nCol >= img.cols) continue;
+                    resImg.at<float>(row, col) += img.at<float>(nRow, nCol) * kernel.at<float>(kRow, kCol);
+                }
+    return resImg;
+}
 
 cv::Mat gaussian(cv::Mat img, int kernelSize, float sigma) {
     cv::Mat resImg = img.clone();

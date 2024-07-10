@@ -11,6 +11,22 @@
 namespace filter {
 
 /**
+ * @brief Do Convolution with the Image and Parallel Kernel
+ * @param img Input Image (Single Channel)
+ * @param kernel Kernel Matrix (Should be Parallel)
+ * @return cv::Mat Convolved Image
+ */
+cv::Mat plConv(cv::Mat img, cv::Mat kernel);
+
+/**
+ * @brief Do Convolution with the Image and Kernel
+ * @param img Input Image (Single Channel)
+ * @param kernel Kernel Matrix
+ * @return cv::Mat Convolved Image
+ */
+cv::Mat conv(cv::Mat img, cv::Mat kernel);
+
+/**
  * @brief Apply Local Edge Preserving Filter to the Image
  * @param img Input Image (Single Channel)
  * @param kernelSize Size of the Kernel (Default: 3)
