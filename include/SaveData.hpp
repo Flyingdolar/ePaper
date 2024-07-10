@@ -4,6 +4,8 @@
 #define SAVEDATA_HPP
 
 #include <cjson/cJSON.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 #include <fstream>
 #include <iostream>
@@ -184,6 +186,14 @@ template <typename valType>
 inline void logData(std::string fileName, std::string key, valType value) { logData(defFolder, fileName, key, value); }
 template <typename valType>
 inline void logData(std::string key, valType value) { logData(defFolder, defFile, key, value); }
+
+/**
+ * @brief Show Progress Bar in the Console.
+ * @param title Title of the Progress Bar.
+ * @param progress Progress Value (0.0 to 1.0 ...i.e. 0% to 100%)
+ * @param desc Description of the Progress Bar.
+ */
+void showProgress(std::string title, float progress, std::string desc);
 
 }  // namespace saveData
 #endif  // SAVEDATA_HPP

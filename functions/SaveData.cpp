@@ -90,4 +90,34 @@ cJSON* readLog(std::string folderName, std::string fileName) {
     return jsData;  // Success
 }
 
+void showProgress(std::string title, float progress, std::string desc) {
+    // Calculate & Allocate the progress bar width
+    struct winsize wSize;  // Get the console width (LINUX) ...for Windows, use GetConsoleScreenBufferInfo
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &wSize);
+    int consoleWidth = wSize.ws_col;
+    int textLen = title.length() + desc.length() + 20;
+    int barWidth = consoleWidth - textLen, progPos = barWidth * progress;
+    float progRate = progress * 100.0;
+
+    // Print the progress bar
+    // Example: "[ Title |=====>        | 50.0% | Description ]"
+    std::cout << "[ " << title << " |";
+    for (int idx = 0; idx < barWidth; idx++)
+        if (idx < progPos)
+            std::cout << "=";  // Progress Bar
+        else if (idx == progPos)
+            std::cout << ">";  // Progress Indicator
+        else
+            std::cout << " ";  // Remaining Space
+    std::cout << "| ";
+    if (progRate < 10.0) std::cout << " ";
+    if (progRate < 100.0) std::cout << " ";
+    std::cout << std::fixed << std::setprecision(1) << progRate << "% | " << desc << " ]";
+    if (progRate >= 100.0)
+        std::cout << std::endl;
+    else
+        std::cout << "\r" << std::flush;  // Return to the beginning of the line
+    return;
+}
+
 }  // namespace saveData
