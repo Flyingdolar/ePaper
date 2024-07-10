@@ -7,6 +7,8 @@
 
 namespace halftone {
 
+extern std::string verbosePath;
+
 // Threshold Map Matrix for Dithering
 const cv::Mat1b tMap2 = (cv::Mat1b(2, 2) << 0, 2, 3, 1);
 const cv::Mat1b tMap4 = (cv::Mat1b(4, 4) << 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
@@ -22,24 +24,22 @@ const cv::Mat1b kJJN = (cv::Mat1b(3, 5) << 0, 0, 0, 7, 5, 3, 5, 7, 5, 3, 1, 3, 5
 /**
  * @brief Direct Binary Search (DBS) Halftoning
  * @param img Input image (Single Channel, 0-1, float)
+ * @param initImg Initial image for DBS (default: empty->random)
  * @param kernelSize Kernel size for DBS
- * @param sigma Sigma value for Point Spread Function (PSF)
- * @param iters Number of iterations for DBS
+ * @param sigma Sigma value for Point Spread Function (PSF) (default: 1.0)
+ * @param iters Number of iterations for DBS (default: 10)
  * @param verbose Verbose mode (default: false)
  * @return Halftoned image (Single Channel, 0-1, float)
+ *
+ * @note If initImg is empty, random initialization is used.
  */
-cv::Mat1f DBS(const cv::Mat1f img, int kernelSize, float sigma, int iters, bool verbose = false);
-
-/**
- * @brief Random Tiled Block Direct Binary Search (RTBDBS) Halftoning
- * @param img Input image (Single Channel, 0-1, float)
- * @param kernelSize Kernel size for DBS
- * @param sigma Sigma value for Point Spread Function (PSF)
- * @param iters Number of iterations for DBS
- * @param verbose Verbose mode (default: false)
- * @return Halftoned image (Single Channel, 0-1, float)
- */
-cv::Mat1f RTBDBS(const cv::Mat1f img, int kernelSize, float sigma, int iters, bool verbose = false);
+cv::Mat1f DBS(const cv::Mat1f img, cv::Mat1f initImg, int kernelSize, float sigma = 1.0f, int iters = 10, bool verbose = false, std::string savePath = "");
+inline cv::Mat1f DBS(const cv::Mat1f grayImg, int kernelSize, float sigma = 1.0f, int iters = 10, bool verbose = false, std::string savePath = "") {
+    cv::Mat1f resImg = cv::Mat1f::zeros(grayImg.size());
+    for (int row = 0; row < grayImg.rows; row++)  // Random Initialization
+        for (int col = 0; col < grayImg.cols; col++) resImg.at<float>(row, col) = (rand() % 2 == 0) ? 0 : 1;
+    return DBS(grayImg, resImg, kernelSize, sigma, iters, verbose, savePath);
+}
 
 /**
  * @brief Halftone by Dithering
@@ -61,14 +61,13 @@ cv::Mat1f ErrDiff(const cv::Mat1f grayImg, int kernelSize = 3, bool verbose = fa
 
 namespace detail {
 
-cv::Mat1f altLpErr(const cv::Mat1f lpErrImg, std::vector<cv::Vec3i> pos, int kernelSize, const cv::Mat1f gskMat2D);
+float deltaLpErr(const cv::Mat1f lpErrImg, cv::Vec3i posCent, cv::Vec3i posSwap, int kSize, const cv::Mat1f gskMat);
 
-cv::Vec2i getMinEPos(const cv::Mat1f resImg, const cv::Mat1f lpErrImg, cv::Vec2i centPos, int kernelSize, const cv::Mat1f gskMat2D);
+cv::Mat1f altLpErr(const cv::Mat1f lpErrImg, cv::Vec3i posPix, int kernelSize, const cv::Mat1f gskMat);
 
 cv::Mat3f viewErr(cv::Mat1f errImg);
 
 }  // namespace detail
-
 }  // namespace halftone
 
 #endif  // HALFTONE_HPP

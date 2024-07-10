@@ -6,7 +6,7 @@ int DBSIters = 10;
 
 int main(int argc, char** argv) {
     // Load the Image
-    std::string savePath = "image/ME/RTBDBS_K" + std::to_string(DBSKernelSize) + "_S" + std::to_string((int)DBSSigma) + "_I" + std::to_string(DBSIters);
+    std::string savePath = "image/ME/DBS_K" + std::to_string(DBSKernelSize) + "_S" + std::to_string((int)DBSSigma) + "_I" + std::to_string(DBSIters);
     cv::Mat img = cv::imread("image/Me.jpg");
     img.convertTo(img, CV_32FC3, 1.0 / 255.0);
 
@@ -27,15 +27,15 @@ int main(int argc, char** argv) {
     // Do the Halftoning
     saveData::initVar(savePath + "/Red");
     saveData::imgMat(imgR, "Original");
-    cv::Mat1f hfR = halftone::RTBDBS(imgR, DBSKernelSize, DBSSigma, DBSIters, true);
+    cv::Mat1f hfR = halftone::DBS(imgR, DBSKernelSize, DBSSigma, DBSIters, true);
     saveData::imgMat(hfR, "Halftone");
     saveData::initVar(savePath + "/Green");
     saveData::imgMat(imgG, "Original");
-    cv::Mat1f hfG = halftone::RTBDBS(imgG, DBSKernelSize, DBSSigma, DBSIters, true);
+    cv::Mat1f hfG = halftone::DBS(imgG, DBSKernelSize, DBSSigma, DBSIters, true);
     saveData::imgMat(hfG, "Halftone");
     saveData::initVar(savePath + "/Blue");
     saveData::imgMat(imgB, "Original");
-    cv::Mat1f hfB = halftone::RTBDBS(imgB, DBSKernelSize, DBSSigma, DBSIters, true);
+    cv::Mat1f hfB = halftone::DBS(imgB, DBSKernelSize, DBSSigma, DBSIters, true);
     saveData::imgMat(hfB, "Halftone");
 
     // Merge the Halftone Image
