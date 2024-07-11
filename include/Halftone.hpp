@@ -60,6 +60,7 @@ cv::Mat1f Dither(const cv::Mat1f grayImg, int kernelSize = 2, bool verbose = fal
 cv::Mat1f ErrDiff(const cv::Mat1f grayImg, int kernelSize = 3, bool verbose = false);
 
 namespace detail {
+cv::Mat1f getGSF(int kSize, float sigma);
 
 float deltaLpErr(const cv::Mat1f lpErrImg, cv::Vec3i posCent, cv::Vec3i posSwap, int kSize, const cv::Mat1f gskMat);
 

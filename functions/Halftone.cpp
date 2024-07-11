@@ -4,21 +4,21 @@ namespace halftone {
 
 std::string verbosePath = "DBS_verbose";  // Global Save Path for DBS Halftoning
 
+// Gaussian Kernel for Halftoning
+cv::Mat1f GSKernel;
+int GSKernelSize = 0;
+float GSSigma = 0;
+
 // Direct Binary Search (DBS) Halftoning
 cv::Mat1f DBS(const cv::Mat1f img, cv::Mat1f initImg, int kernelSize, float sigma, int iters, bool verbose, std::string savePath) {
-    cv::Mat1f resImg = initImg.clone(), lsErrImg = initImg - img,  // Result & Low-pass Error Image
-        psfMat = cv::Mat::zeros(kernelSize, kernelSize, CV_32F);   // Point Spread Function (PSF) Kernel
+    cv::Mat1f resImg = initImg.clone(), lsErrImg = initImg - img;  // Result & Low-pass Error Image
+    cv::Mat1f psfMat = detail::getGSF(kernelSize, sigma);          // Gaussian PSF Kernel
     std::string workFolder = saveData::defFolder;
     int workAmount = iters * img.rows * img.cols, workCount = 0;  // Recording Work Progress
     int swapCount = 0, pixNum = img.rows * img.cols;              // Recording Swap Rate
     savePath = savePath.empty() ? verbosePath : savePath;         // Set Save Path
 
     // 1. Initialize Gaussian PSF Kernel & Low-pass Error Image
-    for (int row = 0; row < kernelSize; row++)
-        for (int col = 0; col < kernelSize; col++) {  // Create Gaussian Kernel
-            float rVal = (row - kernelSize / 2) * (row - kernelSize / 2), cVal = (col - kernelSize / 2) * (col - kernelSize / 2);
-            psfMat.at<float>(row, col) = std::exp(-(rVal + cVal) / (2 * sigma * sigma));
-        }
     lsErrImg = filter::plConv(lsErrImg, psfMat);  // Low-pass Error Image
 
     // 2. DBS Halftoning Iteration
@@ -142,6 +142,18 @@ cv::Mat1f ErrDiff(const cv::Mat1f grayImg, int kernelSize, bool verbose) {
 }  // namespace halftone
 
 namespace halftone::detail {  // Detail Functions
+cv::Mat1f getGSF(int kSize, float sigma) {
+    if (GSKernelSize != kSize || GSSigma != sigma) {
+        GSKernel = cv::Mat1f::zeros(kSize, kSize);
+        for (int row = 0; row < kSize; row++)
+            for (int col = 0; col < kSize; col++) {
+                float rVal = (row - kSize / 2) * (row - kSize / 2), cVal = (col - kSize / 2) * (col - kSize / 2);
+                GSKernel(row, col) = std::exp(-(rVal + cVal) / (2 * sigma * sigma));
+            }
+        GSKernelSize = kSize, GSSigma = sigma;
+    }
+    return GSKernel;
+}
 // Calculate Delta Error for Swap/Toggle Condition
 float deltaLpErr(const cv::Mat1f lpErrImg, cv::Vec3i posCent, cv::Vec3i posSwap, int kSize, const cv::Mat1f gskMat) {
     float deltaErr = 0;
@@ -155,9 +167,9 @@ float deltaLpErr(const cv::Mat1f lpErrImg, cv::Vec3i posCent, cv::Vec3i posSwap,
                       swapDist = {pixRow - posSwap[0] + kSize / 2, pixCol - posSwap[1] + kSize / 2};
             if (pixRow < 0 || pixRow >= lpErrImg.rows || pixCol < 0 || pixCol >= lpErrImg.cols) continue;
             if (centDist[0] >= 0 && centDist[1] >= 0 && centDist[0] < kSize && centDist[1] < kSize)
-                smallDeltaE += gskMat(centDist[0], centDist[1]) * togCent;  // Calculate Small Delta E with Center Pixel
+                smallDeltaE += GSKernel(centDist[0], centDist[1]) * togCent;  // Calculate Small Delta E with Center Pixel
             if (swapDist[0] >= 0 && swapDist[1] >= 0 && swapDist[0] < kSize && swapDist[1] < kSize)
-                smallDeltaE += gskMat(swapDist[0], swapDist[1]) * togSwap;  // Calculate Small Delta E with Swap Pixel
+                smallDeltaE += GSKernel(swapDist[0], swapDist[1]) * togSwap;  // Calculate Small Delta E with Swap Pixel
             deltaErr += std::pow(smallDeltaE + lpErrImg(pixRow, pixCol), 2) - std::pow(lpErrImg(pixRow, pixCol), 2);
         }
 
@@ -174,7 +186,7 @@ cv::Mat1f altLpErr(const cv::Mat1f lpErrImg, cv::Vec3i posPix, int kSize, const 
             int nRow = posPix[0] + rdx, nCol = posPix[1] + cdx;
             int distRow = kSize / 2 + rdx, distCol = kSize / 2 + cdx;
             if (nRow < 0 || nRow >= height || nCol < 0 || nCol >= width) continue;
-            resLpErr(nRow, nCol) += gskMat(distRow, distCol) * posPix[2];
+            resLpErr(nRow, nCol) += GSKernel(distRow, distCol) * posPix[2];
         }
     return resLpErr;
 }
