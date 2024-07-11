@@ -20,11 +20,13 @@
 #include <string>
 #include <vector>
 
+#include "ColorChecker.hpp"
 #include "ColorConvert.hpp"
 #include "Filter.hpp"
 #include "Halftone.hpp"
 #include "Histogram.hpp"
 #include "Measure.hpp"
 #include "SaveData.hpp"
+#include "WhiteBalance.hpp"
 
 #endif  // FUNCTIONS_HPP
