@@ -10,21 +10,23 @@ int GSKernelSize = 0;
 float GSSigma = 0;
 
 // Direct Binary Search (DBS) Halftoning
-cv::Mat1f DBS(const cv::Mat1f img, cv::Mat1f initImg, int kernelSize, float sigma, int iters, bool verbose, std::string savePath) {
-    cv::Mat1f resImg = initImg.clone(), lsErrImg = initImg - img;  // Result & Low-pass Error Image
-    cv::Mat1f psfMat = detail::getGSF(kernelSize, sigma);          // Gaussian PSF Kernel
+cv::Mat1f DBS(const cv::Mat1f grayImg, cv::Mat1f initImg, int kernelSize, float sigma, int iters, bool verbose, std::string savePath) {
+    cv::Mat1f resImg = initImg.clone(), lsErrImg = initImg - grayImg;  // Result & Low-pass Error Image
+    cv::Mat1f psfMat = detail::getGSF(kernelSize, sigma);              // Gaussian PSF Kernel
     std::string workFolder = saveData::defFolder;
-    int workAmount = iters * img.rows * img.cols, workCount = 0;  // Recording Work Progress
-    int swapCount = 0, pixNum = img.rows * img.cols;              // Recording Swap Rate
-    savePath = savePath.empty() ? verbosePath : savePath;         // Set Save Path
+    int workAmount = iters * grayImg.rows * grayImg.cols, workCount = 0;  // Recording Work Progress
+    int swapCount = 0, pixNum = grayImg.rows * grayImg.cols;              // Recording Swap Rate
+    savePath = savePath.empty() ? verbosePath : savePath;                 // Set Save Path
 
     // 1. Initialize Gaussian PSF Kernel & Low-pass Error Image
     lsErrImg = filter::plConv(lsErrImg, psfMat);  // Low-pass Error Image
+    if (verbose) saveData::initVar(workFolder + "/" + savePath, "DBSlog");
+    if (verbose) saveData::imgMat(resImg, "resImg_0"), saveData::imgMat(lsErrImg, "errImg_0");
 
     // 2. DBS Halftoning Iteration
     for (int iter = 0; iter < iters; iter++) {
-        for (int row = 0; row < img.rows; row++)
-            for (int col = 0; col < img.cols; col++) {
+        for (int row = 0; row < grayImg.rows; row++)
+            for (int col = 0; col < grayImg.cols; col++) {
                 float minErr = 0;
                 cv::Vec2i minPos = {-1, -1};
 
@@ -39,7 +41,7 @@ cv::Mat1f DBS(const cv::Mat1f img, cv::Mat1f initImg, int kernelSize, float sigm
                     for (int cdx = -1; cdx <= 1; cdx++) {
                         // Swap Condition
                         int nRow = row + rdx, nCol = col + cdx;
-                        if (nRow < 0 || nRow >= img.rows || nCol < 0 || nCol >= img.cols) continue;
+                        if (nRow < 0 || nRow >= grayImg.rows || nCol < 0 || nCol >= grayImg.cols) continue;
                         if (resImg(nRow, nCol) == resImg(row, col)) continue;
                         cv::Vec3i posCent = {row, col, (int)resImg(row, col) == 0 ? 1 : -1};
                         cv::Vec3i posSwap = {nRow, nCol, (int)resImg(nRow, nCol) == 0 ? 1 : -1};
@@ -64,20 +66,109 @@ cv::Mat1f DBS(const cv::Mat1f img, cv::Mat1f initImg, int kernelSize, float sigm
                 swapCount++;  // Update the Swap Rate & Work Progress
             }
         // Verbose Show the Result of Each Iteration
-        if (verbose) saveData::initVar(workFolder + "/" + savePath, "DBSlog");
         if (verbose) saveData::imgMat(resImg, "resImg_" + std::to_string(iter + 1)), saveData::imgMat(lsErrImg, "errImg_" + std::to_string(iter + 1));
         // Verbose Save log for Each Iteration
         float errVal = 0;
-        for (int row = 0; row < img.rows; row++)
-            for (int col = 0; col < img.cols; col++) errVal += std::abs(lsErrImg(row, col));
-        errVal /= (float)(img.rows * img.cols);
+        for (int row = 0; row < grayImg.rows; row++)
+            for (int col = 0; col < grayImg.cols; col++) errVal += std::abs(lsErrImg(row, col));
+        errVal /= (float)(grayImg.rows * grayImg.cols);
         if (verbose) saveData::logData("Iter " + std::to_string(iter + 1) + " Error", errVal);
         if (verbose) saveData::logData("Iter " + std::to_string(iter + 1) + " Swap Rate", (float)swapCount / (float)pixNum * 100.0f);
-        if (verbose) saveData::initVar(workFolder);
         swapCount = 0;  // Reset the Swap Rate
     }
-
+    if (verbose) saveData::initVar(workFolder);
     return resImg;
+}
+cv::Mat1f DBS(const cv::Mat1f grayImg, int kernelSize, float sigma, int iters, bool verbose, std::string savePath) {
+    return DBS(grayImg, getRandBin(cv::Vec2i(grayImg.rows, grayImg.cols)), kernelSize, sigma, iters, verbose, savePath);
+}
+
+// Random Tiled Blocks Direct Binary Search (RTB-DBS) Halftoning
+cv::Mat1f RTBDBS(const cv::Mat1f grayImg, cv::Mat1f initImg, cv::Mat1i blkMap, int kernelSize, float sigma, int iters, bool verbose, std::string savePath) {
+    cv::Mat1f resImg = initImg.clone(), lsErrImg = initImg - grayImg;  // Result & Low-pass Error Image
+    std::string workFolder = saveData::defFolder;
+    int workAmount = iters * grayImg.rows * grayImg.cols, workCount = 0;  // Recording Work Progress
+    int swapCount = 0, pixNum = grayImg.rows * grayImg.cols;              // Recording Swap Rate
+    savePath = savePath.empty() ? verbosePath : savePath;                 // Set Save Path
+
+    // 1. Generate Process Sequence by Block Map
+    std::vector<cv::Vec2i> blkSeq(blkMap.rows * blkMap.cols);
+    for (int row = 0; row < blkMap.rows; row++)
+        for (int col = 0; col < blkMap.cols; col++) blkSeq[blkMap(row, col)] = {row, col};
+
+    // 2. Initialize Gaussian PSF Kernel & Low-pass Error Image
+    cv::Mat1f psfMat = detail::getGSF(kernelSize, sigma);  // Gaussian PSF Kernel
+    lsErrImg = filter::plConv(lsErrImg, psfMat);           // Low-pass Error Image
+    if (verbose) saveData::initVar(workFolder + "/" + savePath, "DBSlog");
+    if (verbose) saveData::imgMat(resImg, "resImg_0"), saveData::imgMat(lsErrImg, "errImg_0");
+
+    // 3. DBS Halftoning Iteration
+    for (int iter = 0; iter < iters; iter++) {
+        for (int blkR = 0; blkR < grayImg.rows / blkMap.rows; blkR++)
+            for (int blkC = 0; blkC < grayImg.cols / blkMap.cols; blkC++)
+                for (cv::Vec2i workPos : blkSeq) {
+                    int row = blkR * blkMap.rows + workPos[0], col = blkC * blkMap.cols + workPos[1];
+                    float minErr = 0;
+                    cv::Vec2i minPos = {-1, -1};
+
+                    if (verbose) {  // Show Progress
+                        std::string title = "DBS Itr: " + std::to_string(iter + 1);
+                        std::string desc = "Swap Rate: " + std::to_string((int)((float)swapCount / (float)pixNum * 100)) + "%";
+                        saveData::showProgress(title, (float)workCount / (float)workAmount, desc);
+                    }
+
+                    // For Every Pixel in the Kernel, Calculate whether to Swap/Toggle or Not by Min Error
+                    for (int rdx = -1; rdx <= 1; rdx++)
+                        for (int cdx = -1; cdx <= 1; cdx++) {
+                            // Swap Condition
+                            int nRow = row + rdx, nCol = col + cdx;
+                            if (nRow < 0 || nRow >= grayImg.rows || nCol < 0 || nCol >= grayImg.cols) continue;
+                            if (resImg(nRow, nCol) == resImg(row, col)) continue;
+                            cv::Vec3i posCent = {row, col, (int)resImg(row, col) == 0 ? 1 : -1};
+                            cv::Vec3i posSwap = {nRow, nCol, (int)resImg(nRow, nCol) == 0 ? 1 : -1};
+                            float deltaErr = detail::deltaLpErr(lsErrImg, posCent, posSwap, kernelSize, psfMat);
+                            if (deltaErr < minErr) minErr = deltaErr, minPos = {nRow, nCol};
+                        }
+                    // Toggle Condition
+                    cv::Vec3i posCent = {row, col, (int)resImg(row, col) == 0 ? 1 : -1}, posSwap = {row, col, 0};
+                    float deltaErr = detail::deltaLpErr(lsErrImg, posCent, posSwap, kernelSize, psfMat);
+                    if (deltaErr < minErr) minErr = deltaErr, minPos = {row, col};
+
+                    workCount++;  // Update the Work Progress, Skip if No Swap/Toggle
+                    if (minPos[0] == -1 || minPos[1] == -1) continue;
+
+                    // Update the Result Image & Low-pass Error Image
+                    cv::Vec3i newCent = {row, col, (int)resImg(row, col) == 0 ? 1 : -1};
+                    cv::Vec3i newSwap = {minPos[0], minPos[1], (int)resImg(minPos[0], minPos[1]) == 0 ? 1 : -1};
+                    if (newCent[0] == newSwap[0] && newCent[1] == newSwap[1]) newSwap[2] = 0;
+                    resImg(newCent[0], newCent[1]) += newCent[2], resImg(newSwap[0], newSwap[1]) += newSwap[2];
+                    lsErrImg = detail::altLpErr(lsErrImg, newCent, kernelSize, psfMat);
+                    lsErrImg = detail::altLpErr(lsErrImg, newSwap, kernelSize, psfMat);
+                    swapCount++;  // Update the Swap Rate & Work Progress
+                }
+        // Verbose Show the Result of Each Iteration
+        if (verbose) saveData::imgMat(resImg, "resImg_" + std::to_string(iter + 1)), saveData::imgMat(lsErrImg, "errImg_" + std::to_string(iter + 1));
+        // Verbose Save log for Each Iteration
+        float errVal = 0;
+        for (int row = 0; row < grayImg.rows; row++)
+            for (int col = 0; col < grayImg.cols; col++) errVal += std::abs(lsErrImg(row, col));
+        errVal /= (float)(grayImg.rows * grayImg.cols);
+        if (verbose) saveData::logData("Iter " + std::to_string(iter + 1) + " Error", errVal);
+        if (verbose) saveData::logData("Iter " + std::to_string(iter + 1) + " Swap Rate", (float)swapCount / (float)pixNum * 100.0f);
+        swapCount = 0;  // Reset the Swap Rate
+    }
+    if (verbose) saveData::initVar(workFolder);
+    return resImg;
+}
+cv::Mat1f RTBDBS(const cv::Mat1f grayImg, cv::Mat1i blkMap, int kernelSize, float sigma, int iters, bool verbose, std::string savePath) {
+    return RTBDBS(grayImg, getRandBin(cv::Vec2i(grayImg.rows, grayImg.cols)), blkMap, kernelSize, sigma, iters, verbose, savePath);
+}
+cv::Mat1f RTBDBS(const cv::Mat1f grayImg, cv::Mat1f initImg, int blkSize, int kernelSize, float sigma, int iters, bool verbose, std::string savePath) {
+    cv::Mat1i blkMap = VoidCluster(getRandBin(cv::Vec2i(grayImg.rows, grayImg.cols)), blkSize, sigma);
+    return RTBDBS(grayImg, initImg, blkMap, kernelSize, sigma, iters, verbose, savePath);
+}
+cv::Mat1f RTBDBS(const cv::Mat1f grayImg, int blkSize, int kernelSize, float sigma, int iters, bool verbose, std::string savePath) {
+    return RTBDBS(grayImg, getRandBin(cv::Vec2i(grayImg.rows, grayImg.cols)), blkSize, kernelSize, sigma, iters, verbose, savePath);
 }
 
 // Dithering Halftoning
@@ -100,6 +191,22 @@ cv::Mat1f Dither(const cv::Mat1f grayImg, int kernelSize, bool verbose) {
         for (int col = 0; col < width; col++) {
             int kRow = row % kernelSize, kCol = col % kernelSize;
             if (grayImg(row, col) > (float)ditherMat(kRow, kCol) / (float)(kernelSize * kernelSize))
+                resImg(row, col) = 1;
+            else
+                resImg(row, col) = 0;
+        }
+    return resImg;
+}
+
+cv::Mat1f Dither(const cv::Mat1f grayImg, cv::Mat1f dithMap, bool verbose) {
+    int height = grayImg.rows, width = grayImg.cols;
+    int dithH = dithMap.rows, dithW = dithMap.cols;
+    cv::Mat1f resImg = grayImg.clone();
+
+    for (int row = 0; row < height; row++)
+        for (int col = 0; col < width; col++) {
+            int dRow = row % dithH, dCol = col % dithW;
+            if (grayImg(row, col) > dithMap(dRow, dCol))
                 resImg(row, col) = 1;
             else
                 resImg(row, col) = 0;
@@ -140,28 +247,21 @@ cv::Mat1f ErrDiff(const cv::Mat1f grayImg, int kernelSize, bool verbose) {
 }
 
 // Void & Cluster Dither Array Generation
-cv::Mat1i voidCluster(const cv::Mat1f hfImg, cv::Vec2i blkSize, int kernelSize, float sigma) {
-    int height = hfImg.rows, width = hfImg.cols;
-    int blkRNum = height / blkSize[0], blkCNum = width / blkSize[1];
-    cv::Mat1i rankImg = cv::Mat1i::zeros(height, width);
-
-    for (int rdx = 0; rdx < blkRNum; rdx++)
-        for (int cdx = 0; cdx < blkCNum; cdx++) {
-            int rStart = rdx * blkSize[0], rEnd = std::min((rdx + 1) * blkSize[0], height);
-            int cStart = cdx * blkSize[1], cEnd = std::min((cdx + 1) * blkSize[1], width);
-            int blkPixNum = (rEnd - rStart) * (cEnd - cStart);
-
-            // Do Void & Cluster Dithering for Each Block
-            cv::Mat1f blkImg = hfImg(cv::Rect(cStart, rStart, cEnd - cStart, rEnd - rStart)).clone();
-            cv::Mat1i blkRank = detail::VCP1(blkImg, kernelSize, sigma);  // Phase 1: Rank the Cluster Part
-            detail::VCP2(blkImg, blkRank, kernelSize, sigma);             // Phase 2: Rank the Void Part
-            detail::VCP3(blkImg, blkRank, kernelSize, sigma);             // Phase 3: Rank the Cluster Part
-
-            // Copy the Block Rank Image to the Result Image
-            for (int row = rStart; row < rEnd; row++)
-                for (int col = cStart; col < cEnd; col++) rankImg(row, col) = blkRank(row - rStart, col - cStart);
-        }
+cv::Mat1f VoidCluster(const cv::Mat1f binImg, int kernelSize, float sigma, bool normalize, bool verbose) {
+    int height = binImg.rows, width = binImg.cols, pixNum = height * width;
+    cv::Mat1i rankImg = detail::VCP1(binImg, kernelSize, sigma);  // Rank Image for Void & Cluster Dithering
+    detail::VCP2(binImg, rankImg, kernelSize, sigma);             // Rank the Void Part
+    detail::VCP3(binImg, rankImg, kernelSize, sigma);             // Rank the Cluster Part
+    if (normalize) rankImg /= pixNum;                             // Normalize the Rank Image
     return rankImg;
+}
+
+// Get Random Binary Image
+cv::Mat1f getRandBin(cv::Vec2i imgSize) {
+    cv::Mat1f randImg = cv::Mat::zeros(imgSize[0], imgSize[1], CV_32F);
+    for (int row = 0; row < imgSize[0]; row++)
+        for (int col = 0; col < imgSize[1]; col++) randImg(row, col) = (rand() % 2 == 0) ? 0 : 1;
+    return randImg;
 }
 
 }  // namespace halftone

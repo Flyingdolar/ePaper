@@ -5,6 +5,8 @@
 
 std::vector<cv::Mat1f> imgResList;
 
+cv::Mat1f dithMap;
+
 // ==================================== Generate Test Images ==================================== //
 cv::Mat1f genGradImg(int imgSize) {
     cv::Mat1f img(imgSize, imgSize, 0.0);
@@ -58,38 +60,57 @@ int main(int argc, char** argv) {
 
     saveData::initVar("res/test/Halftone");
 
-    // Test 0: Original Image
-    std::cout << "Test 0: Original Image" << std::endl;
-    std::function tfPass = [](cv::Mat1f img) { return img; };
-    testHFT("0_Original", tfPass, imgList);
-    sampleImg = colorconvert::mergeCh(imgResList[4], imgResList[3], imgResList[2]);
-    saveData::imgMat(sampleImg, "SpColor");
+    // // Test 0: Original Image
+    // std::cout << "Test 0: Original Image" << std::endl;
+    // std::function tfPass = [](cv::Mat1f img) { return img; };
+    // testHFT("0_Original", tfPass, imgList);
+    // sampleImg = colorconvert::mergeCh(imgResList[4], imgResList[3], imgResList[2]);
+    // saveData::imgMat(sampleImg, "SpColor");
 
-    // Test 1: Halftone by Dithering
-    std::cout << "Test 1: Halftone by Dithering" << std::endl;
-    std::function tfDither2 = [](cv::Mat1f img) { return halftone::Dither(img, 2); };
-    std::function tfDither4 = [](cv::Mat1f img) { return halftone::Dither(img, 4); };
-    std::function tfDither8 = [](cv::Mat1f img) { return halftone::Dither(img, 8); };
-    testHFT("1_Dither_2", tfDither2, imgList), testHFT("1_Dither_4", tfDither4, imgList), testHFT("1_Dither_8", tfDither8, imgList);
-    sampleImg = colorconvert::mergeCh(imgResList[4], imgResList[3], imgResList[2]);
-    saveData::imgMat(sampleImg, "SpColor_Dither");
+    // // Test 1: Halftone by Dithering
+    // std::cout << "Test 1: Halftone by Dithering" << std::endl;
+    // std::function tfDither2 = [](cv::Mat1f img) { return halftone::Dither(img, 2); };
+    // std::function tfDither4 = [](cv::Mat1f img) { return halftone::Dither(img, 4); };
+    // std::function tfDither8 = [](cv::Mat1f img) { return halftone::Dither(img, 8); };
+    // testHFT("1_Dither_2", tfDither2, imgList), testHFT("1_Dither_4", tfDither4, imgList), testHFT("1_Dither_8", tfDither8, imgList);
+    // sampleImg = colorconvert::mergeCh(imgResList[4], imgResList[3], imgResList[2]);
+    // saveData::imgMat(sampleImg, "SpColor_Dither");
 
-    // Test 2: Halftone by Error Diffusion
-    std::cout << "Test 2: Halftone by Error Diffusion" << std::endl;
-    std::function tfErrDiff3 = [](cv::Mat1f img) { return halftone::ErrDiff(img, 3); };
-    std::function tfErrDiff5 = [](cv::Mat1f img) { return halftone::ErrDiff(img, 5); };
-    testHFT("2_ErrDiff_FS", tfErrDiff3, imgList), testHFT("2_ErrDiff_JJN", tfErrDiff5, imgList);
-    sampleImg = colorconvert::mergeCh(imgResList[4], imgResList[3], imgResList[2]);
-    saveData::imgMat(sampleImg, "SpColor_ErrDiff");
+    // // Test 2: Halftone by Error Diffusion
+    // std::cout << "Test 2: Halftone by Error Diffusion" << std::endl;
+    // std::function tfErrDiff3 = [](cv::Mat1f img) { return halftone::ErrDiff(img, 3); };
+    // std::function tfErrDiff5 = [](cv::Mat1f img) { return halftone::ErrDiff(img, 5); };
+    // testHFT("2_ErrDiff_FS", tfErrDiff3, imgList), testHFT("2_ErrDiff_JJN", tfErrDiff5, imgList);
+    // sampleImg = colorconvert::mergeCh(imgResList[4], imgResList[3], imgResList[2]);
+    // saveData::imgMat(sampleImg, "SpColor_ErrDiff");
 
-    // Test 3: Direct Binary Search (DBS) Halftoning
-    std::cout << "Test 3: Direct Binary Search (DBS) Halftoning" << std::endl;
-    std::function tfDBSK3 = [](cv::Mat1f img) { return halftone::DBS(img, 3, 1.0, 10, true); };
-    std::function tfDBSK5 = [](cv::Mat1f img) { return halftone::DBS(img, 5, 1.0, 10, true); };
-    std::function tfDBSK13 = [](cv::Mat1f img) { return halftone::DBS(img, 13, 1.0, 10, true); };
-    testHFT("3_DBS_K3", tfDBSK3, imgList), testHFT("3_DBS_K5", tfDBSK5, imgList), testHFT("3_DBS_K13", tfDBSK13, imgList);
+    // // Test 3: Direct Binary Search (DBS) Halftoning
+    // std::cout << "Test 3: Direct Binary Search (DBS) Halftoning" << std::endl;
+    // std::function tfDBSK3 = [](cv::Mat1f img) { return halftone::DBS(img, 3, 1.0, 10, true); };
+    // std::function tfDBSK5 = [](cv::Mat1f img) { return halftone::DBS(img, 5, 1.0, 10, true); };
+    // std::function tfDBSK13 = [](cv::Mat1f img) { return halftone::DBS(img, 13, 1.0, 10, true); };
+    // testHFT("3_DBS_K3", tfDBSK3, imgList), testHFT("3_DBS_K5", tfDBSK5, imgList), testHFT("3_DBS_K13", tfDBSK13, imgList);
+    // sampleImg = colorconvert::mergeCh(imgResList[4], imgResList[3], imgResList[2]);
+    // saveData::imgMat(sampleImg, "SpColor_DBS");
+
+    // // Test 4: Direct Binary Search (DBS), Start with cv::Mat1f::zeros
+    // std::cout << "Test 4: Direct Binary Search (DBS), Start with cv::Mat1f::zeros" << std::endl;
+    // std::function tfDBSK3Z = [](cv::Mat1f img) { return halftone::DBS(img, cv::Mat1f::zeros(img.size()), 3, 1.0, 10, true); };
+    // std::function tfDBSK5Z = [](cv::Mat1f img) { return halftone::DBS(img, cv::Mat1f::zeros(img.size()), 5, 1.0, 10, true); };
+    // std::function tfDBSK13Z = [](cv::Mat1f img) { return halftone::DBS(img, cv::Mat1f::zeros(img.size()), 13, 1.0, 10, true); };
+    // testHFT("4_DBS_K3Z", tfDBSK3Z, imgList), testHFT("4_DBS_K5Z", tfDBSK5Z, imgList), testHFT("4_DBS_K13Z", tfDBSK13Z, imgList);
+    // sampleImg = colorconvert::mergeCh(imgResList[4], imgResList[3], imgResList[2]);
+    // saveData::imgMat(sampleImg, "SpColor_DBSZ");
+
+    // Test 5: Random Tiled Blocks Direct Binary Search (RTB-DBS)
+    std::cout << "Test 5: Random Tiled Blocks Direct Binary Search (RTB-DBS)" << std::endl;
+    dithMap = halftone::VoidCluster(halftone::getRandBin(cv::Vec2i(8, 8)), 3, 1.0f, false);
+    std::function tfRTBDBSK3 = [](cv::Mat1f img) { return halftone::RTBDBS(img, cv::Mat1f::zeros(img.size()), dithMap, 3, 1.0, 10, true); };
+    std::function tfRTBDBSK5 = [](cv::Mat1f img) { return halftone::RTBDBS(img, cv::Mat1f::zeros(img.size()), dithMap, 5, 1.0, 10, true); };
+    std::function tfRTBDBSK13 = [](cv::Mat1f img) { return halftone::RTBDBS(img, cv::Mat1f::zeros(img.size()), dithMap, 13, 1.0, 10, true); };
+    testHFT("5_RTBDBS_K3", tfRTBDBSK3, imgList), testHFT("5_RTBDBS_K5", tfRTBDBSK5, imgList), testHFT("5_RTBDBS_K13", tfRTBDBSK13, imgList);
     sampleImg = colorconvert::mergeCh(imgResList[4], imgResList[3], imgResList[2]);
-    saveData::imgMat(sampleImg, "SpColor_DBS");
+    saveData::imgMat(sampleImg, "SpColor_RTBDBS");
 
     std::cout << "All Tests Done!" << std::endl;
     return 0;

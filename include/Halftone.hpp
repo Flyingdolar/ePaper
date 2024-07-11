@@ -25,7 +25,7 @@ const cv::Mat1b kJJN = (cv::Mat1b(3, 5) << 0, 0, 0, 7, 5, 3, 5, 7, 5, 3, 1, 3, 5
  * @brief Direct Binary Search (DBS) Halftoning
  * @param img Input image (Single Channel, 0-1, float)
  * @param initImg Initial image for DBS (default: empty->random)
- * @param kernelSize Kernel size for DBS
+ * @param kernelSize Kernel size for Point Spread Function (PSF) (default: 3)
  * @param sigma Sigma value for Point Spread Function (PSF) (default: 1.0)
  * @param iters Number of iterations for DBS (default: 10)
  * @param verbose Verbose mode (default: false)
@@ -33,13 +33,26 @@ const cv::Mat1b kJJN = (cv::Mat1b(3, 5) << 0, 0, 0, 7, 5, 3, 5, 7, 5, 3, 1, 3, 5
  *
  * @note If initImg is empty, random initialization is used.
  */
-cv::Mat1f DBS(const cv::Mat1f img, cv::Mat1f initImg, int kernelSize, float sigma = 1.0f, int iters = 10, bool verbose = false, std::string savePath = "");
-inline cv::Mat1f DBS(const cv::Mat1f grayImg, int kernelSize, float sigma = 1.0f, int iters = 10, bool verbose = false, std::string savePath = "") {
-    cv::Mat1f resImg = cv::Mat1f::zeros(grayImg.size());
-    for (int row = 0; row < grayImg.rows; row++)  // Random Initialization
-        for (int col = 0; col < grayImg.cols; col++) resImg.at<float>(row, col) = (rand() % 2 == 0) ? 0 : 1;
-    return DBS(grayImg, resImg, kernelSize, sigma, iters, verbose, savePath);
-}
+cv::Mat1f DBS(const cv::Mat1f img, cv::Mat1f initImg, int kernelSize = 3, float sigma = 1.0f, int iters = 10, bool verbose = false, std::string savePath = "");
+cv::Mat1f DBS(const cv::Mat1f grayImg, int kernelSize = 3, float sigma = 1.0f, int iters = 10, bool verbose = false, std::string savePath = "");
+
+/**
+ * @brief Random Tiled Blocks Direct Binary Search (RTB-DBS) Halftoning
+ * @param img Input image (Single Channel, 0-1, float)
+ * @param initImg Initial image for RTB-DBS (default: empty->random)
+ * @param blkMap Block map for RTB-DBS (Single Channel, 0-blkSize[0]*blkSize[1]-1, int)
+ * @param kernelSize Kernel size for Point Spread Function (PSF) (default: 3)
+ * @param sigma Sigma value for Point Spread Function (PSF) (default: 1.0)
+ * @param iters Number of iterations for RTB-DBS (default: 10)
+ * @param verbose Verbose mode (default: false)
+ * @return Halftoned image (Single Channel, 0-1, float)
+ *
+ * @note If initImg is empty, random initialization is used.
+ */
+cv::Mat1f RTBDBS(const cv::Mat1f grayImg, cv::Mat1f initImg, cv::Mat1i blkMap, int kernelSize = 3, float sigma = 1.0f, int iters = 10, bool verbose = false, std::string savePath = "");
+cv::Mat1f RTBDBS(const cv::Mat1f grayImg, cv::Mat1i blkMap, int kernelSize = 3, float sigma = 1.0f, int iters = 10, bool verbose = false, std::string savePath = "");
+cv::Mat1f RTBDBS(const cv::Mat1f grayImg, cv::Mat1f initImg, int blkSize, int kernelSize = 3, float sigma = 1.0f, int iters = 10, bool verbose = false, std::string savePath = "");
+cv::Mat1f RTBDBS(const cv::Mat1f grayImg, int blkSize, int kernelSize = 3, float sigma = 1.0f, int iters = 10, bool verbose = false, std::string savePath = "");
 
 /**
  * @brief Halftone by Dithering
@@ -49,6 +62,15 @@ inline cv::Mat1f DBS(const cv::Mat1f grayImg, int kernelSize, float sigma = 1.0f
  * @return Halftoned image (Single Channel, 0-1, float)
  */
 cv::Mat1f Dither(const cv::Mat1f grayImg, int kernelSize = 2, bool verbose = false);
+/**
+ * @brief Halftone by Dithering
+ * @param grayImg Input image (Single Channel, 0-1, float)
+ * @param dithMap Dithering map (Same size as input image, 0-1, float)
+ * @param verbose Verbose mode (default: false)
+ * @return Halftoned image (Single Channel, 0-1, float)
+ * @note It would dithering by thresholding with dithMap.
+ */
+cv::Mat1f Dither(const cv::Mat1f grayImg, cv::Mat1f dithMap, bool verbose = false);
 
 /**
  * @brief Halftone by Error Diffusion
@@ -65,9 +87,19 @@ cv::Mat1f ErrDiff(const cv::Mat1f grayImg, int kernelSize = 3, bool verbose = fa
  * @param blkSize Block size for Void & Cluster Dithering
  * @param kernelSize Kernel size for Void & Cluster Dithering (default: 3)
  * @param sigma Sigma value for Point Spread Function (PSF) (default: 1.0)
+ * @param normalize Normalize the dither array to 0-1 (default: false)
+ * @param verbose Verbose mode (default: false)
+ * @note If not normalized, the dither array would be 0-(blkSize[0]*blkSize[1]-1)
  * @return Dither array for Void & Cluster Dithering
  */
-cv::Mat1i voidCluster(const cv::Mat1f img, cv::Vec2i blkSize, int kernelSize = 3, float sigma = 1.0f);
+cv::Mat1f VoidCluster(const cv::Mat1f binImg, int kernelSize = 3, float sigma = 1.0, bool normalize = false, bool verbose = false);
+
+/**
+ * @brief Generate Random Binary Image
+ * @param imgSize Size of the binary image (height, width)
+ * @return Random binary image (Single Channel, 0-1, float)
+ */
+cv::Mat1f getRandBin(cv::Vec2i imgSize);
 
 namespace detail {
 cv::Mat1f getGSF(int kSize, float sigma);
