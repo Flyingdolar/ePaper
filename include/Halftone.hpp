@@ -59,8 +59,26 @@ cv::Mat1f Dither(const cv::Mat1f grayImg, int kernelSize = 2, bool verbose = fal
  */
 cv::Mat1f ErrDiff(const cv::Mat1f grayImg, int kernelSize = 3, bool verbose = false);
 
+/**
+ * @brief Void & Cluster Dither Array Generation
+ * @param img Input image (Single Channel, 0-1, float)
+ * @param blkSize Block size for Void & Cluster Dithering
+ * @param kernelSize Kernel size for Void & Cluster Dithering (default: 3)
+ * @param sigma Sigma value for Point Spread Function (PSF) (default: 1.0)
+ * @return Dither array for Void & Cluster Dithering
+ */
+cv::Mat1i voidCluster(const cv::Mat1f img, cv::Vec2i blkSize, int kernelSize = 3, float sigma = 1.0f);
+
 namespace detail {
 cv::Mat1f getGSF(int kSize, float sigma);
+
+cv::Mat1f VCFilter(const cv::Mat1f blkImg, int kSize, float sigma);
+
+cv::Mat1i VCP1(const cv::Mat1f bkImg, int kSize, float sigma);
+
+void VCP2(cv::Mat1f bkImg, cv::Mat1i rkImg, int kSize, float sigma);
+
+void VCP3(const cv::Mat1f bkImg, cv::Mat1i rkImg, int kSize, float sigma);
 
 float deltaLpErr(const cv::Mat1f lpErrImg, cv::Vec3i posCent, cv::Vec3i posSwap, int kSize, const cv::Mat1f gskMat);
 

@@ -139,6 +139,31 @@ cv::Mat1f ErrDiff(const cv::Mat1f grayImg, int kernelSize, bool verbose) {
     return resImg;
 }
 
+// Void & Cluster Dither Array Generation
+cv::Mat1i voidCluster(const cv::Mat1f hfImg, cv::Vec2i blkSize, int kernelSize, float sigma) {
+    int height = hfImg.rows, width = hfImg.cols;
+    int blkRNum = height / blkSize[0], blkCNum = width / blkSize[1];
+    cv::Mat1i rankImg = cv::Mat1i::zeros(height, width);
+
+    for (int rdx = 0; rdx < blkRNum; rdx++)
+        for (int cdx = 0; cdx < blkCNum; cdx++) {
+            int rStart = rdx * blkSize[0], rEnd = std::min((rdx + 1) * blkSize[0], height);
+            int cStart = cdx * blkSize[1], cEnd = std::min((cdx + 1) * blkSize[1], width);
+            int blkPixNum = (rEnd - rStart) * (cEnd - cStart);
+
+            // Do Void & Cluster Dithering for Each Block
+            cv::Mat1f blkImg = hfImg(cv::Rect(cStart, rStart, cEnd - cStart, rEnd - rStart)).clone();
+            cv::Mat1i blkRank = detail::VCP1(blkImg, kernelSize, sigma);  // Phase 1: Rank the Cluster Part
+            detail::VCP2(blkImg, blkRank, kernelSize, sigma);             // Phase 2: Rank the Void Part
+            detail::VCP3(blkImg, blkRank, kernelSize, sigma);             // Phase 3: Rank the Cluster Part
+
+            // Copy the Block Rank Image to the Result Image
+            for (int row = rStart; row < rEnd; row++)
+                for (int col = cStart; col < cEnd; col++) rankImg(row, col) = blkRank(row - rStart, col - cStart);
+        }
+    return rankImg;
+}
+
 }  // namespace halftone
 
 namespace halftone::detail {  // Detail Functions
@@ -154,6 +179,103 @@ cv::Mat1f getGSF(int kSize, float sigma) {
     }
     return GSKernel;
 }
+
+cv::Mat1f VCFilter(const cv::Mat1f blkImg, int kSize, float sigma) {
+    int height = blkImg.rows, width = blkImg.cols;
+    cv::Mat1f resImg = cv::Mat1f::zeros(height, width);
+
+    // 1. Create Gaussian PSF Kernel
+    cv::Mat1f psfMat = getGSF(kSize, sigma);
+
+    // 2. Filter the Block Image with Gaussian Filter
+    for (int row = 0; row < height; row++)
+        for (int col = 0; col < width; col++) {
+            float sumVal = 0;
+            for (int rdx = -kSize / 2; rdx <= kSize / 2; rdx++)
+                for (int cdx = -kSize / 2; cdx <= kSize / 2; cdx++) {
+                    int nRow = row + rdx, nCol = col + cdx;
+                    nRow = nRow < 0 ? nRow + height : nRow, nCol = nCol < 0 ? nCol + width : nCol;
+                    nRow = nRow >= height ? nRow - height : nRow, nCol = nCol >= width ? nCol - width : nCol;
+                    sumVal += psfMat(rdx + kSize / 2, cdx + kSize / 2) * blkImg(nRow, nCol);
+                }
+            resImg(row, col) = sumVal;
+        }
+    return resImg;
+}
+
+// Void & Cluster Phase 1: Rank the Cluster Part
+cv::Mat1i VCP1(const cv::Mat1f bkImg, int kSize, float sigma) {
+    int height = bkImg.rows, width = bkImg.cols, rank = -1;
+    cv::Mat1f tmpBk = bkImg.clone();
+    cv::Mat1i rkImg = cv::Mat1f::zeros(height, width);
+
+    // 1. Calculate the Amount of 1s in the Block as rank value
+    for (int row = 0; row < height; row++)
+        for (int col = 0; col < width; col++)
+            if (bkImg(row, col) > 0.5) rank++;
+
+    // 2. Rank the Value from sum(1s) to 0
+    while (rank >= 0) {
+        cv::Mat1f dsMat = VCFilter(tmpBk, kSize, sigma);
+        cv::Vec3i maxPos = {-1, -1, -1};
+        for (int row = 0; row < height; row++)
+            for (int col = 0; col < width; col++)  // Find the Most Clustered Pixel
+                if (tmpBk(row, col) > 0.5 && dsMat(row, col) > maxPos[2]) maxPos = {row, col, (int)dsMat(row, col)};
+        tmpBk(maxPos[0], maxPos[1]) = 0;       // Remove the Clustered Pixel
+        rkImg(maxPos[0], maxPos[1]) = rank--;  // Rank the Clustered Pixel
+    }
+    return rkImg;
+}
+
+void VCP2(cv::Mat1f bkImg, cv::Mat1i rkImg, int kSize, float sigma) {
+    int height = bkImg.rows, width = bkImg.cols, rank = 0;
+
+    // 1. Find the Maximum Value of Rank Image, set the Rank Value = Max + 1
+    for (int row = 0; row < height; row++)
+        for (int col = 0; col < width; col++) rank = std::max(rank, rkImg(row, col));
+    rank++;
+
+    // 2. Rank the Value from 0 to sum(1s)
+    while (rank < height * width / 2) {
+        cv::Mat1f dsMat = VCFilter(bkImg, kSize, sigma);
+        cv::Vec3i minPos = {-1, -1, 2};
+
+        for (int row = 0; row < height; row++)
+            for (int col = 0; col < width; col++)  // Find the Most Void Pixel
+                if (bkImg(row, col) == 0 && dsMat(row, col) < minPos[2]) minPos = {row, col, (int)dsMat(row, col)};
+        bkImg(minPos[0], minPos[1]) = 1;       // Add the Void Pixel
+        rkImg(minPos[0], minPos[1]) = rank++;  // Rank the Void Pixel
+    }
+    return;
+}
+
+void VCP3(const cv::Mat1f bkImg, cv::Mat1i rkImg, int kSize, float sigma) {
+    int height = bkImg.rows, width = bkImg.cols, rank = 0;
+    cv::Mat1f psfMat = getGSF(kSize, sigma), bImg = bkImg.clone();
+
+    // 1. Find the Maximum Value of Rank Image, set the Rank Value = Max + 1
+    for (int row = 0; row < height; row++)
+        for (int col = 0; col < width; col++) rank = std::max(rank, rkImg(row, col));
+    rank++;
+
+    // 2. Reverse the image
+    for (int row = 0; row < height; row++)
+        for (int col = 0; col < width; col++) bImg(row, col) = std::abs(bImg(row, col) - 1);
+
+    // 3. Rank the Value from height*width/2 to height*width
+    while (rank < height * width) {
+        cv::Mat1f dsMat = VCFilter(bImg, kSize, sigma);
+        cv::Vec3i maxPos = {-1, -1, -1};
+
+        for (int row = 0; row < height; row++)
+            for (int col = 0; col < width; col++)  // Find the Most Clustered Pixel
+                if (bImg(row, col) == 1 && dsMat(row, col) > maxPos[2]) maxPos = {row, col, (int)dsMat(row, col)};
+        bImg(maxPos[0], maxPos[1]) = 0;        // Remove the Clustered Pixel
+        rkImg(maxPos[0], maxPos[1]) = rank++;  // Rank the Clustered Pixel
+    }
+    return;
+}
+
 // Calculate Delta Error for Swap/Toggle Condition
 float deltaLpErr(const cv::Mat1f lpErrImg, cv::Vec3i posCent, cv::Vec3i posSwap, int kSize, const cv::Mat1f gskMat) {
     float deltaErr = 0;
