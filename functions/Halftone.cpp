@@ -167,6 +167,7 @@ cv::Mat1i voidCluster(const cv::Mat1f hfImg, cv::Vec2i blkSize, int kernelSize, 
 }  // namespace halftone
 
 namespace halftone::detail {  // Detail Functions
+// Gaussian Kernel for Halftoning
 cv::Mat1f getGSF(int kSize, float sigma) {
     if (GSKernelSize != kSize || GSSigma != sigma) {
         GSKernel = cv::Mat1f::zeros(kSize, kSize);
@@ -180,6 +181,7 @@ cv::Mat1f getGSF(int kSize, float sigma) {
     return GSKernel;
 }
 
+// Void & Cluster: Gaussian Filter with Periodic Boundary Condition
 cv::Mat1f VCFilter(const cv::Mat1f blkImg, int kSize, float sigma) {
     int height = blkImg.rows, width = blkImg.cols;
     cv::Mat1f resImg = cv::Mat1f::zeros(height, width);
@@ -227,6 +229,7 @@ cv::Mat1i VCP1(const cv::Mat1f bkImg, int kSize, float sigma) {
     return rkImg;
 }
 
+// Void & Cluster Phase 2: Rank the Void Part
 void VCP2(cv::Mat1f bkImg, cv::Mat1i rkImg, int kSize, float sigma) {
     int height = bkImg.rows, width = bkImg.cols, rank = 0;
 
@@ -249,6 +252,7 @@ void VCP2(cv::Mat1f bkImg, cv::Mat1i rkImg, int kSize, float sigma) {
     return;
 }
 
+// Void & Cluster Phase 3: Rank the Cluster Part
 void VCP3(const cv::Mat1f bkImg, cv::Mat1i rkImg, int kSize, float sigma) {
     int height = bkImg.rows, width = bkImg.cols, rank = 0;
     cv::Mat1f psfMat = getGSF(kSize, sigma), bImg = bkImg.clone();
@@ -276,7 +280,7 @@ void VCP3(const cv::Mat1f bkImg, cv::Mat1i rkImg, int kSize, float sigma) {
     return;
 }
 
-// Calculate Delta Error for Swap/Toggle Condition
+// DBS: Calculate Delta Error for Swap/Toggle Condition
 float deltaLpErr(const cv::Mat1f lpErrImg, cv::Vec3i posCent, cv::Vec3i posSwap, int kSize, const cv::Mat1f gskMat) {
     float deltaErr = 0;
     int togCent = posCent[2], togSwap = posSwap[2];
@@ -298,7 +302,7 @@ float deltaLpErr(const cv::Mat1f lpErrImg, cv::Vec3i posCent, cv::Vec3i posSwap,
     return deltaErr;
 }
 
-// Alter & Update the low-pass Error Image by Swap/Toggle Condition
+// DBS: Alter & Update the low-pass Error Image by Swap/Toggle Condition
 cv::Mat1f altLpErr(const cv::Mat1f lpErrImg, cv::Vec3i posPix, int kSize, const cv::Mat1f gskMat) {
     int height = lpErrImg.rows, width = lpErrImg.cols;
     cv::Mat1f resLpErr = lpErrImg.clone();
@@ -313,7 +317,7 @@ cv::Mat1f altLpErr(const cv::Mat1f lpErrImg, cv::Vec3i posPix, int kSize, const 
     return resLpErr;
 }
 
-// Visualize Error Image
+// DBS: Visualize Error Image
 cv::Mat3f viewErr(cv::Mat1f errImg) {
     cv::Mat3f visImg(errImg.size());
     for (int row = 0; row < errImg.rows; row++)
