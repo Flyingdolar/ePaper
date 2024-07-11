@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -23,6 +24,7 @@
 #include "Filter.hpp"
 #include "Halftone.hpp"
 #include "Histogram.hpp"
+#include "Measure.hpp"
 #include "SaveData.hpp"
 
 #endif  // FUNCTIONS_HPP
