@@ -6,6 +6,7 @@
 
 #include <cjson/cJSON.h>
 
+#include <Eigen/Dense>
 #include <NumCpp.hpp>
 #include <algorithm>
 #include <chrono>
@@ -22,10 +23,12 @@
 
 #include "ColorChecker.hpp"
 #include "ColorConvert.hpp"
+#include "ColorCorrect.hpp"
 #include "Filter.hpp"
 #include "Halftone.hpp"
 #include "Histogram.hpp"
 #include "Measure.hpp"
+#include "PSO.hpp"
 #include "SaveData.hpp"
 #include "WhiteBalance.hpp"
 

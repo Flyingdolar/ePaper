@@ -25,4 +25,5 @@ target_link_libraries(functions
     ${OpenCV_LIBS}
     NumCpp::NumCpp
     cjson
+    Eigen3::Eigen
 )

@@ -92,5 +92,14 @@ int main(int argc, char** argv) {
     imgRGBCC = cv::max(0.0f, cv::min(1.0f, imgRGBCC)), imgRGBGC = cv::max(0.0f, cv::min(1.0f, imgRGBGC));
     saveData::imgMat(ViewAC(imgRGBCC, imgRGBGC), "WB_CC_lRGB"), saveData::logData("GrayScale(WB)", imgRGBGC);
 
+    // Get CCM by Color Checker
+    colorcorrect::CCM_2D EPDCCM;
+    EPDCCM.initImg(imgRGBCC, GTRGBCC);
+    EPDCCM.optbyPSO(1000, -4.0, 4.0, 1e-10, 1e-10, 2);
+    cv::Mat3f imgCCM = EPDCCM.applyCCM(imgRGBCC);
+    saveData::imgMat(ViewAC(imgCCM, imgRGBGC), "CCM_CC_lRGB");
+    saveData::logData("CCM Matrix", EPDCCM.getCCM());
+    double finalLoss = EPDCCM();
+    std::cout << "Final Loss: " << finalLoss << std::endl;
     return 0;
 }

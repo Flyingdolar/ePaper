@@ -15,8 +15,9 @@ endif()
 find_package(OpenCV REQUIRED QUIET)
 find_package(NumCpp REQUIRED QUIET)
 find_package(cJSON REQUIRED QUIET)
+find_package(Eigen3 REQUIRED QUIET)
 
-message(STATUS "Found Packages: [OpenCV: ${OpenCV_VERSION}] [NumCpp: ${NumCpp_VERSION}] [cJSON: ${cJSON_VERSION}]")
+message(STATUS "Found Packages: [OpenCV: ${OpenCV_VERSION}] [NumCpp: ${NumCpp_VERSION}] [cJSON: ${cJSON_VERSION}] [Eigen3: ${Eigen3_VERSION}]")
 
 # Copy image data to build directory
 message(STATUS "Copy [data] to build directory")
@@ -34,7 +35,7 @@ target_include_directories(functions PUBLIC include)    # Functions include
 
 # Set Include directories & Link libraries
 include_directories(include ${OpenCV_INCLUDE_DIRS} ${NumCpp_INCLUDE_DIRS} ${cJSON_INCLUDE_DIRS})
-link_libraries(${OpenCV_LIBS} NumCpp::NumCpp cjson functions)
+link_libraries(${OpenCV_LIBS} NumCpp::NumCpp cjson Eigen3::Eigen functions)
 
 # Get Project Names, Test Names saved in the variable
 foreach(SRC ${PROJECT_SOURCES})
