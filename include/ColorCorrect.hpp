@@ -21,8 +21,10 @@ class CCM_2D {
     double operator()();                          // Calculate Loss
     // Optimize
     void optbyPSO(  // Optimize CCM by PSO (Particle Swarm Optimization)
-        int maxIter, double minBnd, double maxBnd,
+        int pcNum, int maxIter, double minBnd, double maxBnd,
         double minPosDiff, double minFuncDiff, int verbosity);
+    void optbyBF(  // Optimize CCM by Brute Force
+        int iter, double minBnd, double maxBnd, double step, int verbosity);
     cv::Mat3f applyCCM(cv::Mat3f img);           // Apply CCM to Image
     cv::Mat1f getCCM() const { return ccmMat; }  // Get CCM Matrix
 };

@@ -101,6 +101,7 @@ void showProgress(std::string title, float progress, std::string desc) {
 
     // Print the progress bar
     // Example: "[ Title |=====>        | 50.0% | Description ]"
+    if (progRate >= 100.0) std::cout << std::endl;
     std::cout << "[ " << title << " |";
     for (int idx = 0; idx < barWidth; idx++)
         if (idx < progPos)

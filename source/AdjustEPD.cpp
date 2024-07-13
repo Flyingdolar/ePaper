@@ -68,7 +68,7 @@ cv::Mat3f ViewAC(const cv::Mat3f valCC, const cv::Mat3f valCG, int blkSize = 100
 }
 
 int main(int argc, char** argv) {
-    saveData::initVar("res/test/AdjustEPD", "AdjustEPD");
+    saveData::initVar("res/test/AdjustEPD_PSO", "AdjustEPD");
     cv::Mat3f imgRGBCC(4, 6), imgRGBGC(1, 8);
     cv::Mat3f GTRGBCC(4, 6), GTRGBGC(1, 8);
 
@@ -95,7 +95,8 @@ int main(int argc, char** argv) {
     // Get CCM by Color Checker
     colorcorrect::CCM_2D EPDCCM;
     EPDCCM.initImg(imgRGBCC, GTRGBCC);
-    EPDCCM.optbyPSO(1000, -4.0, 4.0, 1e-10, 1e-10, 2);
+    EPDCCM.optbyPSO(1000, 1000, -3.0, 3.0, 1e-10, 1e-10, 2);
+    // EPDCCM.optbyBF(6, -2.5, 2.5, 0.5, 2);
     cv::Mat3f imgCCM = EPDCCM.applyCCM(imgRGBCC);
     saveData::imgMat(ViewAC(imgCCM, imgRGBGC), "CCM_CC_lRGB");
     saveData::logData("CCM Matrix", EPDCCM.getCCM());
